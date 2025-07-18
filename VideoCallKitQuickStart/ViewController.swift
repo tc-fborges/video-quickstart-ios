@@ -68,6 +68,69 @@ class ViewController: UIViewController {
         super.init(coder: aDecoder)
 
         callKitProvider.setDelegate(self, queue: nil)
+        audioDevice.block = {
+            self.setupAudio()
+        }
+    }
+    
+    func setupAudio() {
+        do {
+            
+            let audioSession = AVAudioSession.sharedInstance()
+            do {
+                try audioSession.setCategory(.playAndRecord,
+                                             mode: .voiceChat,
+                                             options: .mixWithOthers)
+            } catch {
+                print("Failed to set audio session category: \(error.localizedDescription)")
+            }
+            
+#if targetEnvironment(simulator)
+            // Workaround for simulator
+            let sampleRate = DefaultAudioDevice.SampleRateSimulator
+            let ioBufferDuration = DefaultAudioDevice.IOBufferDurationSimulator
+#else
+            let sampleRate = 48000.0
+            let ioBufferDuration = 0.02
+#endif
+            
+            do {
+                try audioSession.setPreferredSampleRate(sampleRate)
+            } catch {
+                print("Failed to set preferred sample rate: \(error.localizedDescription)")
+            }
+            
+            do {
+                try audioSession.setPreferredIOBufferDuration(ioBufferDuration)
+            } catch {
+                print("Failed to set preferred IO buffer duration: \(error.localizedDescription)")
+            }
+            
+            do {
+                try audioSession.setAggregatedIOPreference(.aggregated)
+            } catch {
+                print("Failed to set aggregated IO preference: \(error.localizedDescription)")
+            }
+            
+            if audioSession.maximumInputNumberOfChannels > 0 {
+                do {
+                    try audioSession.setPreferredInputNumberOfChannels(1)
+                } catch {
+                    print("Failed to set preferred input number of channels: \(error.localizedDescription)")
+                }
+            }
+            
+            if audioSession.maximumOutputNumberOfChannels > 0 {
+                do {
+                    try audioSession.setPreferredOutputNumberOfChannels(1)
+                } catch {
+                    print("Failed to set preferred input number of channels: \(error.localizedDescription)")
+                }
+            }
+            try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+        } catch {
+            print("Failed to set preferred output number of channels: \(error.localizedDescription)")
+        }
     }
 
     deinit {
